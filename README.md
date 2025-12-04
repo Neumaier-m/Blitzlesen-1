@@ -85,16 +85,6 @@
       transform: none;
     }
 
-    button.secondary {
-      background: #e4e4e7;
-      color: #111827;
-    }
-
-    button:not(:disabled):active {
-      transform: translateY(1px);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    }
-
     .timer-display {
       font-size: 1.4rem;
       font-weight: 600;
@@ -122,20 +112,6 @@
       border-radius: 0.5rem;
       font-size: 2rem;
       font-weight: 600;
-    }
-
-    .hint {
-      font-size: 0.85rem;
-      color: #6b7280;
-      text-align: center;
-      margin-top: 0.75rem;
-    }
-
-    .footer {
-      margin-top: 1.5rem;
-      font-size: 0.8rem;
-      text-align: center;
-      color: #9ca3af;
     }
 
     .speed-controls {
@@ -178,26 +154,23 @@
       <div class="badge">
         Stufe / ID: <span id="levelLabel">–</span>
       </div>
+
       <div class="speed-controls">
         <span>Tempo:</span>
         <button class="speed-button active" data-speed="slow">
-          <span class="speed-icon">🐢</span>
-          langsam
+          <span class="speed-icon">🐢</span> langsam
         </button>
         <button class="speed-button" data-speed="medium">
-          <span class="speed-icon">🐇</span>
-          mittel
+          <span class="speed-icon">🐇</span> mittel
         </button>
         <button class="speed-button" data-speed="fast">
-          <span class="speed-icon">⚡</span>
-          schnell
+          <span class="speed-icon">⚡</span> schnell
         </button>
       </div>
     </div>
 
     <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.5rem;">
       <button id="startButton" class="primary">⏱️ Start</button>
-      <button id="showButton" class="secondary">👁️ Wörter dauerhaft anzeigen</button>
     </div>
 
     <div class="timer-display" id="timerDisplay">Bereit</div>
@@ -206,17 +179,15 @@
       <span class="hint">Drücke „Start“, um mit der Blitzleseübung zu beginnen.</span>
     </div>
 
-    <div class="hint">
-      Tipp: Diese Seite kann über einen QR-Code mit passender <code>?id=...</code>-Adresse geöffnet werden.
-    </div>
-
     <div class="footer">
       Blitzlesen – einfache Übungswebseite für die Grundschule
     </div>
   </div>
 
   <script>
-    // ======= DEINE WORTLISTEN =======
+    // ============================
+    //   DEINE WORTLISTEN
+    // ============================
     const UEBUNGEN = {
       stufe1: [
         "dumm",
@@ -294,17 +265,16 @@
       ]
     };
 
-    // Optional: IDs, die auf eine Stufe zeigen (z.B. „Max“ → stufe2)
-    const ID_AUF_STUFE = {
-      // "max": "stufe2",
-      // "gruppe3_kind5": "stufe1",
-    };
+    // Optional: IDs → Stufen
+    const ID_AUF_STUFE = {};
 
-    // Tempo: Dauer pro Wort in Millisekunden
+    // ============================
+    //   TEMPO-EINSTELLUNGEN
+    // ============================
     const SPEED_INTERVALS = {
-      slow: 1200,   // Schildkröte 🐢
-      medium: 700,  // Hase 🐇
-      fast: 300     // Blitz ⚡
+      slow: 2000,   // 🐢
+      medium: 1000, // 🐇
+      fast: 500     // ⚡
     };
 
     let currentSpeed = "slow";
@@ -316,18 +286,16 @@
 
     function bestimmeListe() {
       const id = getQueryParam("id");
-      let key = id || "stufe1"; // Standard: stufe1
+      let key = id || "stufe1";
 
       if (id && ID_AUF_STUFE[id]) {
         key = ID_AUF_STUFE[id];
       }
 
       let liste = UEBUNGEN[key];
-
-      // Fallback, falls unbekannte ID
       if (!liste) {
         key = "stufe1";
-        liste = UEBUNGEN[key] || [];
+        liste = UEBUNGEN[key];
       }
 
       return { keyAnzeigen: id || key, keyIntern: key, wörter: liste };
@@ -336,124 +304,81 @@
     function renderSingleWord(word) {
       const container = document.getElementById("wordsContainer");
       container.innerHTML = "";
-      if (!word) {
-        const span = document.createElement("span");
-        span.className = "hint";
-        span.textContent = "Keine Wörter für diese ID/Stufe hinterlegt.";
-        container.appendChild(span);
-        return;
-      }
+
       const span = document.createElement("span");
       span.className = "word";
       span.textContent = word;
       container.appendChild(span);
     }
 
-    function renderAllWords(words) {
-      const container = document.getElementById("wordsContainer");
-      container.innerHTML = "";
-      if (!words || words.length === 0) {
-        const span = document.createElement("span");
-        span.className = "hint";
-        span.textContent = "Keine Wörter für diese ID/Stufe hinterlegt.";
-        container.appendChild(span);
-        return;
-      }
-      words.forEach((w) => {
-        const span = document.createElement("span");
-        span.className = "word";
-        span.style.fontSize = "1.2rem";
-        span.textContent = w;
-        container.appendChild(span);
-      });
-    }
-
     const { keyAnzeigen, keyIntern, wörter } = bestimmeListe();
-    document.getElementById("levelLabel").textContent = keyAnzeigen + " (" + keyIntern + ")";
-    let originalWords = [...wörter];
+    document.getElementById("levelLabel").textContent =
+      keyAnzeigen + " (" + keyIntern + ")";
 
-    let secondTimer = null;
     let wordTimer = null;
-    let remainingSeconds = 0;
+    let secondTimer = null;
     let currentIndex = 0;
+    let remainingSeconds = 30;
 
     const timerDisplay = document.getElementById("timerDisplay");
     const startButton = document.getElementById("startButton");
-    const showButton = document.getElementById("showButton");
 
     function stopTimers() {
-      if (secondTimer) {
-        clearInterval(secondTimer);
-        secondTimer = null;
-      }
-      if (wordTimer) {
-        clearInterval(wordTimer);
-        wordTimer = null;
-      }
+      if (wordTimer) clearInterval(wordTimer);
+      if (secondTimer) clearInterval(secondTimer);
+      wordTimer = null;
+      secondTimer = null;
       startButton.disabled = false;
     }
 
     function startExercise() {
-      if (!originalWords || originalWords.length === 0) {
-        renderSingleWord(null);
-        timerDisplay.textContent = "Keine Wörter vorhanden.";
-        return;
-      }
+      if (!wörter || wörter.length === 0) return;
 
       stopTimers();
-
-      // Gesamtdauer in Sekunden (kannst du bei Bedarf später anpassen)
-      remainingSeconds = 30;
       currentIndex = 0;
+      remainingSeconds = 30;
 
-      renderSingleWord(originalWords[currentIndex]);
+      renderSingleWord(wörter[currentIndex]);
       timerDisplay.textContent = remainingSeconds + " Sekunden";
       startButton.disabled = true;
 
-      // Sekunden-Countdown
+      // Countdown (Gesamtdauer)
       secondTimer = setInterval(() => {
         remainingSeconds--;
         if (remainingSeconds <= 0) {
           stopTimers();
-          timerDisplay.textContent = "Fertig! Du kannst die Übung erneut starten.";
+          timerDisplay.textContent = "Fertig!";
         } else {
           timerDisplay.textContent = remainingSeconds + " Sekunden";
         }
       }, 1000);
 
       // Wortwechsel nach Tempo
-      const interval = SPEED_INTERVALS[currentSpeed] || SPEED_INTERVALS.slow;
+      const interval = SPEED_INTERVALS[currentSpeed];
       wordTimer = setInterval(() => {
-        currentIndex = (currentIndex + 1) % originalWords.length;
-        renderSingleWord(originalWords[currentIndex]);
+        currentIndex = (currentIndex + 1) % wörter.length;
+        renderSingleWord(wörter[currentIndex]);
       }, interval);
     }
 
-    startButton.addEventListener("click", () => {
-      startExercise();
-    });
+    startButton.addEventListener("click", startExercise);
 
-    showButton.addEventListener("click", () => {
-      stopTimers();
-      timerDisplay.textContent = "Wörter dauerhaft sichtbar.";
-      renderAllWords(originalWords);
-    });
-
-    // Tempo-Buttons
+    // Tempo-Buttons aktivieren
     const speedButtons = document.querySelectorAll(".speed-button");
     speedButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
         speedButtons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
-        currentSpeed = btn.getAttribute("data-speed") || "slow";
 
-        // Wenn die Übung läuft, Tempo sofort anpassen
+        currentSpeed = btn.getAttribute("data-speed");
+
+        // Wenn Übung läuft → Tempo sofort anpassen
         if (wordTimer) {
           clearInterval(wordTimer);
-          const interval = SPEED_INTERVALS[currentSpeed] || SPEED_INTERVALS.slow;
+          const interval = SPEED_INTERVALS[currentSpeed];
           wordTimer = setInterval(() => {
-            currentIndex = (currentIndex + 1) % originalWords.length;
-            renderSingleWord(originalWords[currentIndex]);
+            currentIndex = (currentIndex + 1) % wörter.length;
+            renderSingleWord(wörter[currentIndex]);
           }, interval);
         }
       });
