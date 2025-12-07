@@ -86,11 +86,12 @@
     }
 
     .timer-display {
-      font-size: 1.4rem;
-      font-weight: 600;
-      text-align: center;
-      margin-top: 0.25rem;
-    }
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 0.25rem;
+  display: none; /* Timer ausblenden */
+}
 
     .words {
       margin-top: 1.5rem;
